@@ -153,7 +153,6 @@ export default function AssignTask() {
   const [departmentOptions, setDepartmentOptions] = useState([]);
   const [givenByOptions, setGivenByOptions] = useState([]);
   const [doerOptions, setDoerOptions] = useState([]);
-  const [allDoersData, setAllDoersData] = useState([]); // Store all doer data with department mapping
 
   const frequencies = [
     { value: "one-time", label: "One Time (No Recurrence)" },
@@ -182,35 +181,11 @@ export default function AssignTask() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-
-    // If department changes, reset doer and filter doer options
-    if (name === "department") {
-      setFormData((prev) => ({ ...prev, [name]: value, doer: "" }));
-      filterDoerOptions(value);
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
-    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSwitchChange = (name, e) => {
     setFormData((prev) => ({ ...prev, [name]: e.target.checked }));
-  };
-
-  // Function to filter doer options based on selected department
-  const filterDoerOptions = (selectedDepartment) => {
-    if (!selectedDepartment) {
-      setDoerOptions([]);
-      return;
-    }
-
-    // Filter doers where the department matches
-    const filteredDoers = allDoersData
-      .filter(doer => doer.department === selectedDepartment)
-      .map(doer => doer.name);
-
-    // Remove duplicates and sort
-    const uniqueDoers = [...new Set(filteredDoers)].sort();
-    setDoerOptions(uniqueDoers);
   };
 
   // Function to fetch options from master sheet
@@ -242,7 +217,7 @@ export default function AssignTask() {
       // Extract options from columns A, B, and C
       const departments = [];
       const givenBy = [];
-      const doersData = []; // Store doer with department mapping
+      const doers = [];
 
       // Process all rows starting from index 1 (skip header)
       data.table.rows.slice(1).forEach((row) => {
@@ -260,16 +235,11 @@ export default function AssignTask() {
             givenBy.push(value);
           }
         }
-        // Column C - Doers with Department mapping
+        // Column C - Doers
         if (row.c && row.c[2] && row.c[2].v) {
-          const doerName = row.c[2].v.toString().trim();
-          const department = row.c && row.c[5] && row.c[5].v ? row.c[5].v.toString().trim() : ""; // Column F (index 5)
-
-          if (doerName !== "" && department !== "") {
-            doersData.push({
-              name: doerName,
-              department: department
-            });
+          const value = row.c[2].v.toString().trim();
+          if (value !== "") {
+            doers.push(value);
           }
         }
       });
@@ -277,15 +247,19 @@ export default function AssignTask() {
       // Remove duplicates and sort
       setDepartmentOptions([...new Set(departments)].sort());
       setGivenByOptions([...new Set(givenBy)].sort());
-      setAllDoersData(doersData); // Store all doer data for filtering
+      setDoerOptions([...new Set(doers)].sort());
 
       console.log("Master sheet options loaded successfully", {
         departments: [...new Set(departments)],
         givenBy: [...new Set(givenBy)],
-        doersData: doersData,
+        doers: [...new Set(doers)],
       });
     } catch (error) {
       console.error("Error fetching master sheet options:", error);
+      // Set default options if fetch fails
+      setDepartmentOptions(["Department 1", "Department 2"]);
+      setGivenByOptions(["User 1", "User 2"]);
+      setDoerOptions(["Doer 1", "Doer 2"]);
     }
   };
 
@@ -867,12 +841,9 @@ export default function AssignTask() {
                   value={formData.doer}
                   onChange={handleChange}
                   required
-                  disabled={!formData.department}
-                  className="w-full rounded-md border border-purple-200 p-2 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="w-full rounded-md border border-purple-200 p-2 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
                 >
-                  <option value="">
-                    {!formData.department ? "Select Department First" : "Select Doer"}
-                  </option>
+                  <option value="">Select Doer</option>
                   {doerOptions.map((doer, index) => (
                     <option key={index} value={doer}>
                       {doer}
@@ -1132,4 +1103,3 @@ export default function AssignTask() {
     </AdminLayout>
   );
 }
-
